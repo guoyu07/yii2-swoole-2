@@ -10,6 +10,9 @@ use yii\base\Component;
 
 class Server extends Component
 {
+    /**
+     * @var string 绑定地址
+     */
     public $host;
     public $port = 9502;
     public $mode = SWOOLE_PROCESS;
