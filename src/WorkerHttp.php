@@ -1,0 +1,108 @@
+<?php
+namespace xutl\swoole;
+
+class WorkerHttp extends Worker
+{
+    /**
+     * 静态文件类型
+     *
+     * @var array
+     */
+    protected $assetTypes = [
+        'js'    => 'application/x-javascript',
+        'css'   => 'text/css',
+        'png'   => 'image/png',
+        'jpg'   => 'image/jpeg',
+        'jpeg'  => 'image/jpeg',
+        'gif'   => 'image/gif',
+        'json'  => 'application/json',
+        'svg'   => 'image/svg+xml',
+        'woff'  => 'application/font-woff',
+        'woff2' => 'application/font-woff2',
+        'ttf'   => 'application/x-font-ttf',
+        'eot'   => 'application/vnd.ms-fontobject',
+        'html'  => 'text/html',
+    ];
+
+    /**
+     * HTTP 接口请求处理的方法
+     *
+     * @param \Swoole\Http\Request $request
+     * @param \Swoole\Http\Response $response
+     */
+    public function onRequest($request, $response)
+    {
+        $arr = explode('/', ltrim($request->server['request_uri'], '/'));
+
+        if ($arr[0] === 'assets')
+        {
+            # 静态路径
+            array_shift($arr);
+            $this->assets(implode('/', $arr), $response);
+        }
+        else
+        {
+            # 访问请求页面
+            $uri  = str_replace(['\\', '../'], ['/', '/'], implode('/', $arr));
+            $file = __DIR__ .'/../../../../pages/'. $uri . (substr($uri, -1) === '/' ? 'index' : '') . '.php';
+
+            if (!is_file($file))
+            {
+                $response->status(404);
+                $response->end('page not found');
+                return;
+            }
+
+            ob_start();
+            include $file;
+            $html = ob_get_clean();
+
+            $response->end($html);
+        }
+    }
+
+    /**
+     * 输出静态文件
+     *
+     * @param $uri
+     * @param \Swoole\Http\Response $response
+     */
+    protected function assets($uri, $response)
+    {
+        $uri  = str_replace(['\\', '../'], ['/', '/'], $uri);
+        $rPos = strrpos($uri, '.');
+        if (false === $rPos)
+        {
+            # 没有任何后缀
+            $response->status(404);
+            $response->end('assets not found');
+            return;
+        }
+
+        $type = strtolower(substr($uri, $rPos + 1));
+
+        if (isset($this->assetTypes[$type]))
+        {
+            $response->header('Content-Type', $this->assetTypes[$type]);
+        }
+
+        $file = __DIR__ .'/../../../../assets/'. $uri;
+        if (is_file($file))
+        {
+            # 设置缓存头信息
+            $time = 86400;
+            $response->header('Cache-Control', 'max-age='. $time);
+            $response->header('Pragma'       , 'cache');
+            $response->header('Last-Modified', date('D, d M Y H:i:s \G\M\T', filemtime($file)));
+            $response->header('Expires'      , date('D, d M Y H:i:s \G\M\T', time() + $time));
+
+            # 直接发送文件
+            $response->sendfile($file);
+        }
+        else
+        {
+            $response->status(404);
+            $response->end('assets not found');
+        }
+    }
+}
