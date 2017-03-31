@@ -1,4 +1,5 @@
 <?php
+
 namespace xutl\swoole;
 
 class WorkerHttp extends Worker
@@ -9,19 +10,19 @@ class WorkerHttp extends Worker
      * @var array
      */
     protected $assetTypes = [
-        'js'    => 'application/x-javascript',
-        'css'   => 'text/css',
-        'png'   => 'image/png',
-        'jpg'   => 'image/jpeg',
-        'jpeg'  => 'image/jpeg',
-        'gif'   => 'image/gif',
-        'json'  => 'application/json',
-        'svg'   => 'image/svg+xml',
-        'woff'  => 'application/font-woff',
+        'js' => 'application/x-javascript',
+        'css' => 'text/css',
+        'png' => 'image/png',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif',
+        'json' => 'application/json',
+        'svg' => 'image/svg+xml',
+        'woff' => 'application/font-woff',
         'woff2' => 'application/font-woff2',
-        'ttf'   => 'application/x-font-ttf',
-        'eot'   => 'application/vnd.ms-fontobject',
-        'html'  => 'text/html',
+        'ttf' => 'application/x-font-ttf',
+        'eot' => 'application/vnd.ms-fontobject',
+        'html' => 'text/html',
     ];
 
     /**
@@ -34,20 +35,16 @@ class WorkerHttp extends Worker
     {
         $arr = explode('/', ltrim($request->server['request_uri'], '/'));
 
-        if ($arr[0] === 'assets')
-        {
+        if ($arr[0] === 'assets') {
             # 静态路径
             array_shift($arr);
             $this->assets(implode('/', $arr), $response);
-        }
-        else
-        {
+        } else {
             # 访问请求页面
-            $uri  = str_replace(['\\', '../'], ['/', '/'], implode('/', $arr));
-            $file = __DIR__ .'/../../../../pages/'. $uri . (substr($uri, -1) === '/' ? 'index' : '') . '.php';
+            $uri = str_replace(['\\', '../'], ['/', '/'], implode('/', $arr));
+            $file = __DIR__ . '/../../../../pages/' . $uri . (substr($uri, -1) === '/' ? 'index' : '') . '.php';
 
-            if (!is_file($file))
-            {
+            if (!is_file($file)) {
                 $response->status(404);
                 $response->end('page not found');
                 return;
@@ -69,10 +66,9 @@ class WorkerHttp extends Worker
      */
     protected function assets($uri, $response)
     {
-        $uri  = str_replace(['\\', '../'], ['/', '/'], $uri);
+        $uri = str_replace(['\\', '../'], ['/', '/'], $uri);
         $rPos = strrpos($uri, '.');
-        if (false === $rPos)
-        {
+        if (false === $rPos) {
             # 没有任何后缀
             $response->status(404);
             $response->end('assets not found');
@@ -81,26 +77,22 @@ class WorkerHttp extends Worker
 
         $type = strtolower(substr($uri, $rPos + 1));
 
-        if (isset($this->assetTypes[$type]))
-        {
+        if (isset($this->assetTypes[$type])) {
             $response->header('Content-Type', $this->assetTypes[$type]);
         }
 
-        $file = __DIR__ .'/../../../../assets/'. $uri;
-        if (is_file($file))
-        {
+        $file = __DIR__ . '/../../../../assets/' . $uri;
+        if (is_file($file)) {
             # 设置缓存头信息
             $time = 86400;
-            $response->header('Cache-Control', 'max-age='. $time);
-            $response->header('Pragma'       , 'cache');
+            $response->header('Cache-Control', 'max-age=' . $time);
+            $response->header('Pragma', 'cache');
             $response->header('Last-Modified', date('D, d M Y H:i:s \G\M\T', filemtime($file)));
-            $response->header('Expires'      , date('D, d M Y H:i:s \G\M\T', time() + $time));
+            $response->header('Expires', date('D, d M Y H:i:s \G\M\T', time() + $time));
 
             # 直接发送文件
             $response->sendfile($file);
-        }
-        else
-        {
+        } else {
             $response->status(404);
             $response->end('assets not found');
         }

@@ -1,4 +1,5 @@
 <?php
+
 namespace xutl\swoole;
 
 class Worker
@@ -52,25 +53,21 @@ class Worker
      * 它支持服务器集群下向任意集群去投递数据
      *
      * @param          $data
-     * @param int      $workerId
+     * @param int $workerId
      * @param \Closure $callback
-     * @param int      $serverId 默认 -1 则优先本地投递
-     * @param string   $serverGroup
+     * @param int $serverId 默认 -1 则优先本地投递
+     * @param string $serverGroup
      * @return bool|int
      */
     public function task($data, $workerId = -1, $callback = null, $serverId = -1, $serverGroup = null)
     {
-        if (static::$Server->clustersType < 2)
-        {
+        if (static::$Server->clustersType < 2) {
             # 非高级集群模式
             return $this->server->task($data, $workerId, $callback);
-        }
-        else
-        {
+        } else {
             # 高级集群模式
             $client = Clusters\Client::getClient($serverGroup, $serverId, $workerId, true);
-            if (!$client)
-            {
+            if (!$client) {
                 $this->debug('get task client error');
                 return false;
             }
@@ -82,24 +79,21 @@ class Worker
     /**
      * 阻塞的投递信息
      *
-     * @param mixed  $taskData
-     * @param float  $timeout
-     * @param int    $workerId
-     * @param int    $serverId
+     * @param mixed $taskData
+     * @param float $timeout
+     * @param int $workerId
+     * @param int $serverId
      * @param string $serverGroup
      * @return mixed
      */
     public function taskWait($taskData, $timeout = 0.5, $workerId = -1, $serverId = -1, $serverGroup = null)
     {
-        if (static::$Server->clustersType < 2)
-        {
+        if (static::$Server->clustersType < 2) {
             # 非高级集群模式
             return $this->server->taskwait($taskData, $timeout, $workerId);
-        }
-        else
-        {
+        } else {
             $client = Clusters\Client::getClient($serverGroup, $serverId, $workerId, true);
-            if (!$client)return false;
+            if (!$client) return false;
 
             return $client->taskWait($taskData, $timeout, $this->name);
         }
@@ -128,13 +122,12 @@ class Worker
      */
     protected function timeTick($interval, $callback, $params = null)
     {
-        $aTime  = intval($interval * $this->id / $this->server->setting['worker_num']);
-        $mTime  = intval(microtime(1) * 1000);
+        $aTime = intval($interval * $this->id / $this->server->setting['worker_num']);
+        $mTime = intval(microtime(1) * 1000);
         $aTime += $interval * ceil($mTime / $interval) - $mTime;
 
         # 增加一个延迟执行的定时器
-        swoole_timer_after($aTime, function() use ($interval, $callback, $params)
-        {
+        swoole_timer_after($aTime, function () use ($interval, $callback, $params) {
             # 添加定时器
             swoole_timer_tick($interval, $callback, $params);
         });

@@ -1,4 +1,5 @@
 <?php
+
 namespace xutl\swoole\http;
 
 use xutl\swoole\Server;
@@ -8,21 +9,16 @@ class Request extends \Swoole\Http\Request
     public function __destruct()
     {
         # 移除临时文件
-        if (isset($this->files) && $this->files)
-        {
-            $rm = function($file)
-            {
-                if ($file && is_file($file))
-                {
+        if (isset($this->files) && $this->files) {
+            $rm = function ($file) {
+                if ($file && is_file($file)) {
                     $rs = @unlink($file);
-                    Server::$instance->debug('Remove upload tmp file '. ($rs ? 'success' : 'fail') .': '. $file);
+                    Server::$instance->debug('Remove upload tmp file ' . ($rs ? 'success' : 'fail') . ': ' . $file);
                 }
             };
 
-            foreach ($this->files as $v)
-            {
-                if (isset($v['tmp_name']))
-                {
+            foreach ($this->files as $v) {
+                if (isset($v['tmp_name'])) {
                     /*
                     [
                         'aaa' => [
@@ -50,18 +46,13 @@ class Request extends \Swoole\Http\Request
                         ],
                     ]
                      */
-                    if (is_array($v['tmp_name']))
-                    {
+                    if (is_array($v['tmp_name'])) {
                         $files = self::_each($v['tmp_name']);
                         array_walk($files, $rm);
-                    }
-                    else
-                    {
+                    } else {
                         $rm($v['tmp_name']);
                     }
-                }
-                else
-                {
+                } else {
                     /*
                     [
                         'aaa' => [
@@ -90,8 +81,7 @@ class Request extends \Swoole\Http\Request
                         ],
                     ]
                      */
-                    if (preg_match_all('#"tmp_name":"([^"]+)"#', json_encode($v), $m))
-                    {
+                    if (preg_match_all('#"tmp_name":"([^"]+)"#', json_encode($v), $m)) {
                         array_walk($m[1], $rm);
                     }
                 }
@@ -102,14 +92,10 @@ class Request extends \Swoole\Http\Request
     protected static function _each($arr)
     {
         $rs = [];
-        foreach ($arr as $item)
-        {
-            if (is_array($item))
-            {
+        foreach ($arr as $item) {
+            if (is_array($item)) {
                 $rs = array_merge($rs, self::_each($item));
-            }
-            else
-            {
+            } else {
                 $rs[] = $item;
             }
         }

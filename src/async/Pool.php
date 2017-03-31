@@ -3,7 +3,6 @@
 namespace xutl\swoole\async;
 
 use yii\base\Object;
-use yii\base\Exception;
 
 /**
  * 通用的连接池框架

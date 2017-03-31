@@ -1,4 +1,5 @@
 <?php
+
 namespace xutl\swoole;
 
 define('VERSION', '4.0');
@@ -156,65 +157,48 @@ class Server
      */
     public static $instance;
 
-
     public function __construct($configFile = 'server.yal')
     {
         $this->checkSystem();
 
         $this->startTimeFloat = microtime(1);
-        $this->startTime      = time();
-        self::$instance       = $this;
+        $this->startTime = time();
+        self::$instance = $this;
 
-        if ($configFile)
-        {
-            if (is_array($configFile))
-            {
+        if ($configFile) {
+            if (is_array($configFile)) {
                 $this->config = $configFile;
-            }
-            else
-            {
+            } else {
                 $yal = false;
-                if (!function_exists('\\yaml_parse_file'))
-                {
-                    if (!($yal = class_exists('\\Symfony\\Component\\Yaml\\Yaml')))
-                    {
+                if (!function_exists('\\yaml_parse_file')) {
+                    if (!($yal = class_exists('\\Symfony\\Component\\Yaml\\Yaml'))) {
                         $this->warn('不能启动，需要 yaml 扩展支持，你可以安装 yaml 扩展，也可以通过 composer require symfony/yaml 命令来安装 yaml 的php版本');
                         exit;
                     }
                 }
 
-                if (is_file($configFile))
-                {
+                if (is_file($configFile)) {
                     $this->configFile = realpath($configFile);
 
                     # 读取配置
-                    if ($yal)
-                    {
-                        try
-                        {
+                    if ($yal) {
+                        try {
                             $this->config = \Symfony\Component\Yaml\Yaml::parse(file_get_contents($configFile));
-                        }
-                        catch (\Symfony\Component\Yaml\Exception\ParseException $e)
-                        {
-                            $this->warn('解析配置失败: '. $e->getMessage());
+                        } catch (\Symfony\Component\Yaml\Exception\ParseException $e) {
+                            $this->warn('解析配置失败: ' . $e->getMessage());
                             exit;
                         }
-                    }
-                    else
-                    {
+                    } else {
                         $this->config = yaml_parse_file($configFile);
                     }
-                }
-                else
-                {
+                } else {
                     $this->warn("指定的配置文件: $configFile 不存在");
                     exit;
                 }
             }
         }
 
-        if (!$this->config)
-        {
+        if (!$this->config) {
             $this->warn("配置解析失败");
             exit;
         }
@@ -225,31 +209,26 @@ class Server
 
     protected function checkSystem()
     {
-        if (self::$instance)
-        {
+        if (self::$instance) {
             throw new \Exception('只允许实例化一个 \\MyQEE\\Server\\Server 对象');
         }
 
-        if(!isset($_SERVER['_']))
-        {
+        if (!isset($_SERVER['_'])) {
             $this->warn("必须命令行启动本服务");
             exit;
         }
 
-        if (!defined('SWOOLE_VERSION'))
-        {
+        if (!defined('SWOOLE_VERSION')) {
             $this->warn("必须安装 swoole 插件, see http://www.swoole.com/");
             exit;
         }
 
-        if (version_compare(SWOOLE_VERSION, '1.8.0', '<'))
-        {
+        if (version_compare(SWOOLE_VERSION, '1.8.0', '<')) {
             $this->warn("swoole插件必须>=1.8版本");
             exit;
         }
 
-        if (!class_exists('\\Swoole\\Server', false))
-        {
+        if (!class_exists('\\Swoole\\Server', false)) {
             # 载入兼容对象文件
             include(__DIR__ . '/../other/Compatible.php');
             $this->info("你没有开启 swoole 的命名空间模式, 请修改 ini 文件增加 swoole.use_namespace = true 参数. \n操作方式: 先执行 php --ini 看 swoole 的扩展配置在哪个文件, 然后编辑对应文件加入即可, 如果没有则加入 php.ini 里");
@@ -259,26 +238,21 @@ class Server
     protected function init()
     {
         # 设置参数
-        if (isset($this->config['php']['error_reporting']))
-        {
+        if (isset($this->config['php']['error_reporting'])) {
             error_reporting($this->config['php']['error_reporting']);
         }
 
-        if (isset($this->config['php']['timezone']))
-        {
+        if (isset($this->config['php']['timezone'])) {
             date_default_timezone_set($this->config['php']['timezone']);
         }
 
-        if (!isset($config['unixsock_buffer_size']) || $config['unixsock_buffer_size'] > 1000)
-        {
+        if (!isset($config['unixsock_buffer_size']) || $config['unixsock_buffer_size'] > 1000) {
             # 修改进程间通信的UnixSocket缓存区尺寸
             ini_set('swoole.unixsock_buffer_size', $config['unixsock_buffer_size'] ?: 104857600);
         }
 
-        if ($this->config['clusters']['mode'] !== 'none')
-        {
-            if (!function_exists('\\msgpack_pack'))
-            {
+        if ($this->config['clusters']['mode'] !== 'none') {
+            if (!function_exists('\\msgpack_pack')) {
                 $this->warn('开启集群模式必须安装 msgpack 插件');
                 exit;
             }
@@ -292,33 +266,27 @@ class Server
         //    ini_set('swoole.fast_serialize', 'On');
         //}
 
-        if (!$this->config['socket_block'])
-        {
+        if (!$this->config['socket_block']) {
             # 设置不阻塞
             swoole_async_set(['socket_dontwait' => 1]);
         }
 
         # 启动的任务进程数
-        if (isset($this->config['task']['number']) && $this->config['task']['number'])
-        {
+        if (isset($this->config['task']['number']) && $this->config['task']['number']) {
             $this->config['swoole']['task_worker_num'] = $this->config['task']['number'];
-        }
-        elseif (!isset($this->config['swoole']['task_worker_num']))
-        {
+        } elseif (!isset($this->config['swoole']['task_worker_num'])) {
             # 不启用 task 进程
             $this->config['swoole']['task_worker_num'] = 0;
         }
 
         # 任务进程最大请求数后会重启worker
-        if (isset($this->config['task']['task_max_request']))
-        {
+        if (isset($this->config['task']['task_max_request'])) {
             $this->config['swoole']['task_max_request'] = (int)$this->config['task']['task_max_request'];
         }
 
-        $this->info("======= Swoole Config ========\n". str_replace('\\/', '/', json_encode($this->config['swoole'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)));
+        $this->info("======= Swoole Config ========\n" . str_replace('\\/', '/', json_encode($this->config['swoole'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)));
 
-        if ($this->clustersType > 0)
-        {
+        if ($this->clustersType > 0) {
             # 集群模式下初始化 Host 设置
             Clusters\Host::init($this->config['clusters']['register']['is_register']);
         }
@@ -341,13 +309,10 @@ class Server
 
         $this->onBeforeStart();
 
-        if ($this->clustersType === 2 && $this->config['swoole']['task_worker_num'] > 0)
-        {
+        if ($this->clustersType === 2 && $this->config['swoole']['task_worker_num'] > 0) {
             # 高级集群模式
             $this->startWithAdvancedClusters();
-        }
-        else
-        {
+        } else {
             $this->startWorkerServer();
         }
     }
@@ -365,21 +330,15 @@ class Server
         ];
         $options = getopt('', $longOpts);
 
-        if (isset($options['worker']))
-        {
+        if (isset($options['worker'])) {
             # 仅仅用作 worker 服务器
             $this->startWorkerServer();
-        }
-        elseif (isset($options['task']))
-        {
+        } elseif (isset($options['task'])) {
             # 仅仅用作 Task 服务器
             $this->startTaskServer();
-        }
-        else
-        {
+        } else {
             # 二者都有, 开启一个子进程单独启动task相关服务
-            $process = new \Swoole\Process(function($worker)
-            {
+            $process = new \Swoole\Process(function ($worker) {
                 /**
                  * @var \Swoole\Process $worker
                  */
@@ -389,8 +348,8 @@ class Server
             $process->start();
 
             # 任务进程会通过独立服务启动, 所以这里强制设置成0
-            $config                     = $this->config['swoole'];
-            $config['task_worker_num']  = 0;
+            $config = $this->config['swoole'];
+            $config['task_worker_num'] = 0;
             $config['task_max_request'] = 0;
 
             $this->startWorkerServer($config);
@@ -401,8 +360,7 @@ class Server
 
     protected function startWorkerServer($config = null)
     {
-        switch($this->serverType)
-        {
+        switch ($this->serverType) {
             case 3:
             case 2:
                 # 主端口同时支持 WebSocket 和 Http 协议
@@ -426,17 +384,15 @@ class Server
                 break;
         }
 
-        $opt          = self::parseSockUri($this->mainHost['listen'][0]);
+        $opt = self::parseSockUri($this->mainHost['listen'][0]);
         $this->server = new $className($opt->host, $opt->port, $this->serverMode, $opt->type);
 
         # 设置配置
         $this->server->set($config ?: $this->config['swoole']);
 
         # 有多个端口叠加绑定
-        if (($count = count($this->mainHost['listen'])) > 1)
-        {
-            for($i = 1; $i < $count; $i++)
-            {
+        if (($count = count($this->mainHost['listen'])) > 1) {
+            for ($i = 1; $i < $count; $i++) {
                 $opt = self::parseSockUri($this->mainHost['listen'][$i]);
                 $this->server->listen($opt->host, $opt->port, $opt->type);
             }
@@ -449,10 +405,8 @@ class Server
         $this->initHosts();
 
 
-        if ($this->clustersType > 0)
-        {
-            if ($this->config['clusters']['register']['is_register'])
-            {
+        if ($this->clustersType > 0) {
+            if ($this->config['clusters']['register']['is_register']) {
                 # 启动注册服务器
                 $worker = new Register\WorkerMain($this->server, '_RegisterServer');
                 $worker->listen($this->config['clusters']['register']['ip'], $this->config['clusters']['register']['port']);
@@ -483,49 +437,41 @@ class Server
     protected function bind()
     {
         $this->server->on('ManagerStart', [$this, 'onManagerStart']);
-        $this->server->on('WorkerStart',  [$this, 'onWorkerStart']);
-        $this->server->on('WorkerStop',   [$this, 'onWorkerStop']);
-        $this->server->on('PipeMessage',  [$this, 'onPipeMessage']);
-        $this->server->on('Start',        [$this, 'onStart']);
-        $this->server->on('Finish',       [$this, 'onFinish']);
-        $this->server->on('Task',         [$this, 'onTask']);
-        $this->server->on('Packet',       [$this, 'onPacket']);
-        $this->server->on('Close',        [$this, 'onClose']);
-        $this->server->on('Connect',      [$this, 'onConnect']);
+        $this->server->on('WorkerStart', [$this, 'onWorkerStart']);
+        $this->server->on('WorkerStop', [$this, 'onWorkerStop']);
+        $this->server->on('PipeMessage', [$this, 'onPipeMessage']);
+        $this->server->on('Start', [$this, 'onStart']);
+        $this->server->on('Finish', [$this, 'onFinish']);
+        $this->server->on('Task', [$this, 'onTask']);
+        $this->server->on('Packet', [$this, 'onPacket']);
+        $this->server->on('Close', [$this, 'onClose']);
+        $this->server->on('Connect', [$this, 'onConnect']);
 
         # 其它自定义回调函数
-        foreach (['Shutdown', 'Timer', 'ManagerStop'] as $type)
-        {
+        foreach (['Shutdown', 'Timer', 'ManagerStop'] as $type) {
             $fun = "on$type";
-            if (method_exists($this, $fun))
-            {
+            if (method_exists($this, $fun)) {
                 $this->server->on($type, [$this, $fun]);
             }
         }
 
         # 自定义协议
-        if ($this->serverType === 0)
-        {
+        if ($this->serverType === 0) {
             $this->server->on('Receive', [$this, 'onReceive']);
         }
 
         # HTTP
-        if ($this->serverType === 1 || $this->serverType === 3)
-        {
+        if ($this->serverType === 1 || $this->serverType === 3) {
             $this->server->on('Request', [$this, 'onRequest']);
         }
 
         # WebSocket
-        if ($this->serverType === 2 || $this->serverType === 3)
-        {
+        if ($this->serverType === 2 || $this->serverType === 3) {
             $this->server->on('Message', [$this, 'onMessage']);
 
-            if ($this->mainHost['handShake'])
-            {
+            if ($this->mainHost['handShake']) {
                 $this->server->on('HandShake', [$this, 'onHandShake']);
-            }
-            else
-            {
+            } else {
                 $this->server->on('Open', [$this, 'onOpen']);
             }
         }
@@ -536,24 +482,20 @@ class Server
      */
     protected function initHosts()
     {
-        foreach ($this->config['hosts'] as $key => $setting)
-        {
-            if ($key === $this->mainHostKey)continue;
+        foreach ($this->config['hosts'] as $key => $setting) {
+            if ($key === $this->mainHostKey) continue;
 
-            foreach ((array)$setting['listen'] as $st)
-            {
-                $opt    = $this->parseSockUri($st);
+            foreach ((array)$setting['listen'] as $st) {
+                $opt = $this->parseSockUri($st);
                 $listen = $this->server->listen($opt->host, $opt->port, $opt->type);
-                if (false === $listen)
-                {
-                    $this->warn('创建服务失败：' .$opt->host .':'. $opt->port);
+                if (false === $listen) {
+                    $this->warn('创建服务失败：' . $opt->host . ':' . $opt->port);
                     exit;
                 }
 
                 $this->workers[$key] = $key;
 
-                if (isset($setting['conf']) && $setting['conf'])
-                {
+                if (isset($setting['conf']) && $setting['conf']) {
                     $listen->set($setting['conf']);
                 }
 
@@ -575,17 +517,14 @@ class Server
     {
         global $argv;
 
-        if($server->taskworker)
-        {
+        if ($server->taskworker) {
             # 任务序号
-            $taskId    = $workerId - $server->setting['worker_num'];
-            $className = isset($this->config['task']['class']) && $this->config['task']['class'] ? '\\'. trim($this->config['task']['class'], '\\') : '\\WorkerTask';
+            $taskId = $workerId - $server->setting['worker_num'];
+            $className = isset($this->config['task']['class']) && $this->config['task']['class'] ? '\\' . trim($this->config['task']['class'], '\\') : '\\WorkerTask';
 
-            if (!class_exists($className))
-            {
+            if (!class_exists($className)) {
                 # 停止服务
-                if ($taskId === 0)
-                {
+                if ($taskId === 0) {
                     $this->warn("任务进程 $className 类不存在");
                 }
                 $className = '\\MyQEE\\Server\\WorkerTask';
@@ -594,36 +533,30 @@ class Server
             # 内存限制
             ini_set('memory_limit', $this->config['server']['task_worker_memory_limit'] ?: '4G');
 
-            $this->setProcessName("php ". implode(' ', $argv) ." [task#$taskId]");
+            $this->setProcessName("php " . implode(' ', $argv) . " [task#$taskId]");
 
-            $this->workerTask       = new $className($server, '_Task');
+            $this->workerTask = new $className($server, '_Task');
             # 放一个在 $workers 里
             $this->workers['_Task'] = $this->workerTask;
 
             $this->workerTask->onStart();
-        }
-        else
-        {
-            if ($workerId === 0 && $this->clustersType > 0)
-            {
+        } else {
+            if ($workerId === 0 && $this->clustersType > 0) {
                 # 集群模式, 第一个进程执行, 连接注册服务器
                 $id = isset($this->config['clusters']['id']) && $this->config['clusters']['id'] >= 0 ? (int)$this->config['clusters']['id'] : -1;
                 Register\Client::init($this->config['clusters']['group'] ?: 'default', $id, false);
             }
 
             ini_set('memory_limit', $this->config['server']['worker_memory_limit'] ?: '2G');
-            $this->setProcessName("php ". implode(' ', $argv) ." [worker#$workerId]");
+            $this->setProcessName("php " . implode(' ', $argv) . " [worker#$workerId]");
 
-            foreach ($this->config['hosts'] as $k => $v)
-            {
-                $className = '\\'. trim($v['class'], '\\');
+            foreach ($this->config['hosts'] as $k => $v) {
+                $className = '\\' . trim($v['class'], '\\');
 
-                if (!class_exists($className))
-                {
-                    if ($workerId === 0)
-                    {
+                if (!class_exists($className)) {
+                    if ($workerId === 0) {
                         # 停止服务
-                        $this->warn("Host: {$k} 工作进程 $className 类不存在(". current($v['listen']) .")");
+                        $this->warn("Host: {$k} 工作进程 $className 类不存在(" . current($v['listen']) . ")");
                     }
                     $className = '\\MyQEE\\Server\\Worker';
                 }
@@ -631,24 +564,20 @@ class Server
                 /**
                  * @var $worker Worker
                  */
-                $worker            = new $className($server, $k);
+                $worker = new $className($server, $k);
                 $this->workers[$k] = $worker;
 
-                if ($worker instanceof WorkerAPI)
-                {
-                    $worker->prefix       = isset($v['prefix']) && $v['prefix'] ? $v['prefix'] : '/api/';
+                if ($worker instanceof WorkerAPI) {
+                    $worker->prefix = isset($v['prefix']) && $v['prefix'] ? $v['prefix'] : '/api/';
                     $worker->prefixLength = strlen($worker->prefix);
-                }
-                elseif ($worker instanceof WorkerManager)
-                {
-                    $worker->prefix       = isset($v['prefix']) && $v['prefix'] ? $v['prefix'] : '/api/';
+                } elseif ($worker instanceof WorkerManager) {
+                    $worker->prefix = isset($v['prefix']) && $v['prefix'] ? $v['prefix'] : '/api/';
                     $worker->prefixLength = strlen($worker->prefix);
                 }
             }
             $this->worker = $this->workers[$this->mainHostKey];
 
-            foreach ($this->workers as $worker)
-            {
+            foreach ($this->workers as $worker) {
                 # 调用初始化方法
                 $worker->onStart();
             }
@@ -661,14 +590,10 @@ class Server
      */
     public function onWorkerStop($server, $workerId)
     {
-        if($server->taskworker)
-        {
+        if ($server->taskworker) {
             $this->workerTask->onStop();
-        }
-        else
-        {
-            foreach ($this->workers as $worker)
-            {
+        } else {
+            foreach ($this->workers as $worker) {
                 /**
                  * @var Worker $worker
                  */
@@ -781,43 +706,32 @@ class Server
     public function onPipeMessage($server, $fromWorkerId, $message)
     {
         # 支持对象方式
-        switch (substr($message, 0, 2))
-        {
+        switch (substr($message, 0, 2)) {
             case 'O:':
             case 'a:':
-                if (false !== ($tmp = @unserialize($message)))
-                {
+                if (false !== ($tmp = @unserialize($message))) {
                     $message = $tmp;
                 }
                 break;
         }
 
-        if (is_object($message) && $message instanceof \stdClass && $message->_sys === true)
-        {
-            $name     = $message->name;
+        if (is_object($message) && $message instanceof \stdClass && $message->_sys === true) {
+            $name = $message->name;
             $serverId = $message->sid;
-            $message  = $message->data;
-        }
-        else
-        {
+            $message = $message->data;
+        } else {
             $serverId = $this->serverId;
-            $name     = null;
+            $name = null;
         }
 
-        if ($server->taskworker)
-        {
+        if ($server->taskworker) {
             # 调用 task 进程
             $this->workerTask->onPipeMessage($server, $fromWorkerId, $message, $serverId);
-        }
-        else
-        {
-            if ($name && isset($this->workers[$name]))
-            {
+        } else {
+            if ($name && isset($this->workers[$name])) {
                 # 调用对应的 worker 对象
                 $this->workers[$name]->onPipeMessage($server, $fromWorkerId, $message, $serverId);
-            }
-            else
-            {
+            } else {
                 $this->worker->onPipeMessage($server, $fromWorkerId, $message, $serverId);
             }
         }
@@ -843,13 +757,10 @@ class Server
      */
     public function onTask($server, $taskId, $fromId, $data)
     {
-        if (is_object($data) && $data instanceof \stdClass && $data->_sys === true)
-        {
+        if (is_object($data) && $data instanceof \stdClass && $data->_sys === true) {
             $serverId = $data->sid;
-            $data     = $data->data;
-        }
-        else
-        {
+            $data = $data->data;
+        } else {
             $serverId = $this->serverId;
         }
 
@@ -861,19 +772,16 @@ class Server
      */
     public function onStart($server)
     {
-        if ($this->serverType === 0)
-        {
-            $this->info('Server: '. current($this->mainHost['listen']) .'/');
+        if ($this->serverType === 0) {
+            $this->info('Server: ' . current($this->mainHost['listen']) . '/');
         }
 
-        if ($this->serverType === 1 || $this->serverType === 3)
-        {
-            $this->info('Http Server: '. current($this->mainHost['listen']) .'/');
+        if ($this->serverType === 1 || $this->serverType === 3) {
+            $this->info('Http Server: ' . current($this->mainHost['listen']) . '/');
         }
 
-        if ($this->serverType === 2 || $this->serverType === 3)
-        {
-            $this->info('WebSocket Server: '. current($this->mainHost['listen']) .'/');
+        if ($this->serverType === 2 || $this->serverType === 3) {
+            $this->info('WebSocket Server: ' . current($this->mainHost['listen']) . '/');
         }
     }
 
@@ -883,7 +791,7 @@ class Server
     public function onManagerStart($server)
     {
         global $argv;
-        $this->setProcessName("php ". implode(' ', $argv) ." [manager]");
+        $this->setProcessName("php " . implode(' ', $argv) . " [manager]");
 
         $this->debug('manager start');
     }
@@ -898,27 +806,23 @@ class Server
      */
     public function log($label, array $data = null, $type = 'other', $color = '[36m')
     {
-        if (!isset($this->logPath[$type]))return;
+        if (!isset($this->logPath[$type])) return;
 
-        if (null === $data)
-        {
-            $data  = $label;
+        if (null === $data) {
+            $data = $label;
             $label = null;
         }
 
         list($f, $t) = explode(' ', microtime());
-        $f   = substr($f, 1, 4);
+        $f = substr($f, 1, 4);
         $beg = "\x1b{$color}";
         $end = "\x1b[39m";
-        $str = $beg .'['. date("Y-m-d H:i:s", $t) . "{$f}][{$type}]{$end} - " . ($label ? "\x1b[37m$label$end - " : '') . (is_array($data) ? json_encode($data, JSON_UNESCAPED_UNICODE): $data) . "\n";
+        $str = $beg . '[' . date("Y-m-d H:i:s", $t) . "{$f}][{$type}]{$end} - " . ($label ? "\x1b[37m$label$end - " : '') . (is_array($data) ? json_encode($data, JSON_UNESCAPED_UNICODE) : $data) . "\n";
 
-        if (is_string($this->logPath[$type]))
-        {
+        if (is_string($this->logPath[$type])) {
             # 写文件
             @file_put_contents($this->logPath[$type], $str, FILE_APPEND);
-        }
-        else
-        {
+        } else {
             # 直接输出
             echo $str;
         }
@@ -928,7 +832,7 @@ class Server
      * 错误信息
      *
      * @param string|array $labelOrData
-     * @param array        $data
+     * @param array $data
      */
     public function warn($labelOrData, array $data = null)
     {
@@ -939,7 +843,7 @@ class Server
      * 输出信息
      *
      * @param string|array $labelOrData
-     * @param array        $data
+     * @param array $data
      */
     public function info($labelOrData, array $data = null)
     {
@@ -950,7 +854,7 @@ class Server
      * 调试信息
      *
      * @param string|array $labelOrData
-     * @param array        $data
+     * @param array $data
      */
     public function debug($labelOrData, array $data = null)
     {
@@ -961,7 +865,7 @@ class Server
      * 跟踪信息
      *
      * @param string|array $labelOrData
-     * @param array        $data
+     * @param array $data
      */
     public function trace($labelOrData, array $data = null)
     {
@@ -975,19 +879,13 @@ class Server
      */
     public function setProcessName($name)
     {
-        if (function_exists('\cli_set_process_title'))
-        {
+        if (function_exists('\cli_set_process_title')) {
             @cli_set_process_title($name);
-        }
-        else
-        {
-            if (function_exists('\swoole_set_process_name'))
-            {
+        } else {
+            if (function_exists('\swoole_set_process_name')) {
                 @swoole_set_process_name($name);
-            }
-            else
-            {
-                trigger_error(__METHOD__ .' failed. require cli_set_process_title or swoole_set_process_name.');
+            } else {
+                trigger_error(__METHOD__ . ' failed. require cli_set_process_title or swoole_set_process_name.');
             }
         }
     }
@@ -996,196 +894,147 @@ class Server
     {
         global $argv, $argc;
 
-        if (PHP_SAPI === 'cgi-fcgi')
-        {
+        if (PHP_SAPI === 'cgi-fcgi') {
             # CGI模式在 GET 参数里
-            $argv     = array_keys($_GET);
-            $argc     = count($argv);
-            $_GET     = [];
+            $argv = array_keys($_GET);
+            $argc = count($argv);
+            $_GET = [];
             $_REQUEST = [];
             $_SERVER['argv'] = $argv;
             $_SERVER['argc'] = $argc;
         }
 
-        if (in_array('-vvv', $argv))
-        {
+        if (in_array('-vvv', $argv)) {
             $this->config['log']['level'][] = 'info';
             $this->config['log']['level'][] = 'debug';
             $this->config['log']['level'][] = 'trace';
             error_reporting(E_ALL ^ E_NOTICE);
-        }
-        elseif (in_array('-vv', $argv) || isset($option['debug']))
-        {
+        } elseif (in_array('-vv', $argv) || isset($option['debug'])) {
             $this->config['log']['level'][] = 'info';
             $this->config['log']['level'][] = 'debug';
-        }
-        elseif (in_array('-v', $argv))
-        {
+        } elseif (in_array('-v', $argv)) {
             $this->config['log']['level'][] = 'info';
         }
 
-        if (isset($this->config['server']['log']['level']))
-        {
+        if (isset($this->config['server']['log']['level'])) {
             $this->config['log']['level'] = array_unique((array)$this->config['log']['level']);
         }
 
         # 设置log等级
-        if (!isset($this->config['log']['level']))
-        {
+        if (!isset($this->config['log']['level'])) {
             $this->config['log'] = [
                 'level' => ['warn'],
-                'size'  =>  10240000,
+                'size' => 10240000,
             ];
         }
-        foreach ($this->config['log']['level'] as $key)
-        {
-            if (isset($this->config['log']['path']) && $this->config['log']['path'])
-            {
+        foreach ($this->config['log']['level'] as $key) {
+            if (isset($this->config['log']['path']) && $this->config['log']['path']) {
                 $this->logPath[$key] = str_replace('$type', $key, $this->config['log']['path']);
-                if (is_file($this->logPath[$key]) && !is_writable($this->logPath[$key]))
-                {
-                    echo "给定的log文件不可写: " . $this->logPath[$key] ."\n";
+                if (is_file($this->logPath[$key]) && !is_writable($this->logPath[$key])) {
+                    echo "给定的log文件不可写: " . $this->logPath[$key] . "\n";
                 }
-            }
-            else
-            {
+            } else {
                 $this->logPath[$key] = true;
             }
         }
 
-        if (!isset($this->config['swoole']) || !is_array($this->config['swoole']))
-        {
+        if (!isset($this->config['swoole']) || !is_array($this->config['swoole'])) {
             $this->config['swoole'] = [];
         }
 
-        if (!isset($this->config['server']))
-        {
+        if (!isset($this->config['server'])) {
             $this->config['server'] = [];
         }
 
         # 默认配置
         $this->config['server'] += [
-            'worker_num'               => 16,
-            'mode'                     => 'process',
-            'unixsock_buffer_size'     => '104857600',
-            'worker_memory_limit'      => '2G',
+            'worker_num' => 16,
+            'mode' => 'process',
+            'unixsock_buffer_size' => '104857600',
+            'worker_memory_limit' => '2G',
             'task_worker_memory_limit' => '4G',
-            'socket_block'             => 0,
+            'socket_block' => 0,
         ];
 
-        if (isset($this->config['server']['mode']) && $this->config['server']['mode'] === 'base')
-        {
+        if (isset($this->config['server']['mode']) && $this->config['server']['mode'] === 'base') {
             # 用 BASE 模式启动
             $this->serverMode = SWOOLE_BASE;
         }
 
-        if (isset($this->config['server']['worker_num']))
-        {
+        if (isset($this->config['server']['worker_num'])) {
             $this->config['swoole']['worker_num'] = intval($this->config['server']['worker_num']);
-        }
-        else if (!isset($this->config['swoole']['worker_num']))
-        {
+        } else if (!isset($this->config['swoole']['worker_num'])) {
             $this->config['swoole']['worker_num'] = function_exists('\\swoole_cpu_num') ? \swoole_cpu_num() : 8;
         }
 
         # 设置 swoole 的log输出路径
-        if (isset($this->config['swoole']['log_file']) && $this->config['log']['path'])
-        {
+        if (isset($this->config['swoole']['log_file']) && $this->config['log']['path']) {
             $this->config['swoole']['log_file'] = str_replace('$type', 'swoole', $this->config['log']['path']);
         }
 
         # 设置日志等级
-        if (!isset($this->config['swoole']['log_level']))
-        {
-            if (in_array('debug', $this->config['log']['level']))
-            {
+        if (!isset($this->config['swoole']['log_level'])) {
+            if (in_array('debug', $this->config['log']['level'])) {
                 $this->config['swoole']['log_level'] = 0;
-            }
-            elseif (in_array('trace', $this->config['log']['level']))
-            {
+            } elseif (in_array('trace', $this->config['log']['level'])) {
                 $this->config['swoole']['log_level'] = 1;
-            }
-            elseif (in_array('info', $this->config['log']['level']))
-            {
+            } elseif (in_array('info', $this->config['log']['level'])) {
                 $this->config['swoole']['log_level'] = 2;
-            }
-            else
-            {
+            } else {
                 $this->config['swoole']['log_level'] = 4;
             }
         }
 
-        if (!isset($this->config['hosts']) || !$this->config['hosts'] || !is_array($this->config['hosts']))
-        {
+        if (!isset($this->config['hosts']) || !$this->config['hosts'] || !is_array($this->config['hosts'])) {
             $this->warn('缺少 hosts 配置参数');
             exit;
         }
 
         $mainHost = null;
-        foreach ($this->config['hosts'] as $key => & $hostConfig)
-        {
-            if (!isset($hostConfig['class']))
-            {
+        foreach ($this->config['hosts'] as $key => & $hostConfig) {
+            if (!isset($hostConfig['class'])) {
                 $hostConfig['class'] = "\\Worker{$key}";
-            }
-            elseif (substr($hostConfig['class'], 0) !== '\\')
-            {
-                $hostConfig['class'] = "\\". $hostConfig['class'];
+            } elseif (substr($hostConfig['class'], 0) !== '\\') {
+                $hostConfig['class'] = "\\" . $hostConfig['class'];
             }
 
-            if (!isset($hostConfig['listen']))
-            {
+            if (!isset($hostConfig['listen'])) {
                 $hostConfig['listen'] = [];
-            }
-            elseif (!is_array($hostConfig['listen']))
-            {
+            } elseif (!is_array($hostConfig['listen'])) {
                 $hostConfig['listen'] = [$hostConfig['listen']];
             }
 
-            if (!isset($hostConfig['type']) || !$hostConfig['type'])
-            {
-                if ($hostConfig['listen'])
-                {
+            if (!isset($hostConfig['type']) || !$hostConfig['type']) {
+                if ($hostConfig['listen']) {
                     $tmp = self::parseSockUri($hostConfig['listen'][0]);
-                    $hostConfig['type'] = $tmp->scheme ? : 'tcp';
-                }
-                else
-                {
+                    $hostConfig['type'] = $tmp->scheme ?: 'tcp';
+                } else {
                     $hostConfig['type'] = 'tcp';
                 }
             }
 
-            if (isset($hostConfig['host']) && $hostConfig['port'])
-            {
+            if (isset($hostConfig['host']) && $hostConfig['port']) {
                 array_unshift($hostConfig['listen'], "{$hostConfig['type']}://{$hostConfig['host']}:{$hostConfig['port']}");
-            }
-            elseif (!isset($hostConfig['listen']) || !is_array($hostConfig['listen']) || !$hostConfig['listen'])
-            {
-                $this->warn('hosts “'. $key .'”配置错误，必须 host, port 或 listen 参数.');
+            } elseif (!isset($hostConfig['listen']) || !is_array($hostConfig['listen']) || !$hostConfig['listen']) {
+                $this->warn('hosts “' . $key . '”配置错误，必须 host, port 或 listen 参数.');
                 exit;
             }
 
-            if ($this->serverType < 3)
-            {
-                switch ($hostConfig['type'])
-                {
+            if ($this->serverType < 3) {
+                switch ($hostConfig['type']) {
                     case 'ws':
                     case 'wss':
                         # 使用 onHandShake 回调 see http://wiki.swoole.com/wiki/page/409.html
                         $hostConfig['handShake'] = isset($hostConfig['handShake']) && $hostConfig['handShake'] ? true : false;
 
-                        if ($this->serverType === 1)
-                        {
+                        if ($this->serverType === 1) {
                             # 已经有 http 服务了
                             $this->serverType = 3;
-                        }
-                        else
-                        {
+                        } else {
                             $this->serverType = 2;
                         }
                         $this->hostsHttpAndWs[$key] = $hostConfig;
-                        if (null === $mainHost)
-                        {
+                        if (null === $mainHost) {
                             $mainHost = [$key, $hostConfig];
                         }
 
@@ -1195,13 +1044,10 @@ class Server
                     case 'https':
                     case 'manager':
                     case 'api':
-                        if ($this->serverType === 2)
-                        {
+                        if ($this->serverType === 2) {
                             # 已经有 webSocket 服务了
                             $this->serverType = 3;
-                        }
-                        else
-                        {
+                        } else {
                             $this->serverType = 1;
                         }
 
@@ -1209,99 +1055,85 @@ class Server
                         break;
                     case 'redis':
                         # Redis 服务器
-                        if (!($this instanceof ServerRedis))
-                        {
-                            $this->warn('启动 Redis 服务器必须使用或扩展到 MyQEE\\Server\\ServerRedis 类，当前“'. get_class($this) .'”不支持');
+                        if (!($this instanceof ServerRedis)) {
+                            $this->warn('启动 Redis 服务器必须使用或扩展到 MyQEE\\Server\\ServerRedis 类，当前“' . get_class($this) . '”不支持');
                             exit;
                         }
 
                         $this->serverType = 4;
-                        $mainHost         = [$key, $hostConfig];
+                        $mainHost = [$key, $hostConfig];
                         break;
 
                     case 'upload':
                         # 上传服务器
-                        if (!isset($hostConfig['conf']) || !is_array($hostConfig['conf']))
-                        {
+                        if (!isset($hostConfig['conf']) || !is_array($hostConfig['conf'])) {
                             $hostConfig['conf'] = [];
                         }
 
                         # 设定参数
                         $hostConfig['conf'] = [
-                            'open_eof_check'    => false,
-                            'open_length_check' => false,
-                        ] + $hostConfig['conf'] + [
-                            'upload_tmp_dir'           => is_dir('/tmp/') ? '/tmp/' : sys_get_temp_dir() .'/',
-                            'heartbeat_idle_time'      => 180,
-                            'heartbeat_check_interval' => 60,
-                        ];
+                                'open_eof_check' => false,
+                                'open_length_check' => false,
+                            ] + $hostConfig['conf'] + [
+                                'upload_tmp_dir' => is_dir('/tmp/') ? '/tmp/' : sys_get_temp_dir() . '/',
+                                'heartbeat_idle_time' => 180,
+                                'heartbeat_check_interval' => 60,
+                            ];
 
-                        if (substr($hostConfig['conf']['upload_tmp_dir'], -1) != '/')
-                        {
+                        if (substr($hostConfig['conf']['upload_tmp_dir'], -1) != '/') {
                             $hostConfig['conf']['upload_tmp_dir'] .= '/';
                         }
 
                         break;
 
                     default:
-                        if (!isset($hostConfig['conf']))
-                        {
+                        if (!isset($hostConfig['conf'])) {
                             $hostConfig['conf'] = [
                                 'open_eof_check' => true,
                                 'open_eof_split' => true,
-                                'package_eof'    => "\n",
+                                'package_eof' => "\n",
                             ];
                         }
                         break;
                 }
             }
 
-            if (!$this->mainHostKey)
-            {
+            if (!$this->mainHostKey) {
                 $this->mainHostKey = $key;
-                $this->mainHost    = $hostConfig;
+                $this->mainHost = $hostConfig;
             }
         }
 
-        $this->info("======= Hosts Config ========\n". str_replace('\\/', '/', json_encode($this->config['hosts'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)));
+        $this->info("======= Hosts Config ========\n" . str_replace('\\/', '/', json_encode($this->config['hosts'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)));
 
-        if ($this->serverType === 4 && $this->hostsHttpAndWs)
-        {
+        if ($this->serverType === 4 && $this->hostsHttpAndWs) {
             $this->warn('Redis 服务器和 Http、WebSocket 服务不能同时启用在一个服务里');
             exit;
         }
 
-        if ($mainHost)
-        {
+        if ($mainHost) {
             $this->mainHostKey = $mainHost[0];
-            $this->mainHost    = $mainHost[1];
-        }
-        elseif ($this->hostsHttpAndWs)
-        {
+            $this->mainHost = $mainHost[1];
+        } elseif ($this->hostsHttpAndWs) {
             reset($this->hostsHttpAndWs);
             $this->mainHostKey = key($this->hostsHttpAndWs);
-            $this->mainHost    = current($this->hostsHttpAndWs);
+            $this->mainHost = current($this->hostsHttpAndWs);
         }
 
-        if (isset($this->config['server']['name']) && $this->config['server']['name'])
-        {
+        if (isset($this->config['server']['name']) && $this->config['server']['name']) {
             $this->serverName = $this->config['server']['name'];
-        }
-        else
-        {
+        } else {
             $opt = self::parseSockUri($this->mainHost['listen'][0]);
             $this->serverName = $opt->host . ':' . $opt->port;
             unset($opt);
         }
 
         # 无集群模式
-        if (!isset($this->config['clusters']['mode']) || !$this->config['clusters']['mode'])
-        {
+        if (!isset($this->config['clusters']['mode']) || !$this->config['clusters']['mode']) {
             $this->config['clusters']['mode'] = 'none';
         }
 
-        switch ($this->config['clusters']['mode'])
-        {
+        switch ($this->config['clusters']['mode']) {
             case 'simple':
             case 'task':
                 $this->clustersType = 1;
@@ -1313,59 +1145,48 @@ class Server
         }
 
         # 集群服务器
-        if ($this->clustersType > 0)
-        {
-            if (!isset($this->config['clusters']['register']) || !is_array($this->config['clusters']['register']))
-            {
+        if ($this->clustersType > 0) {
+            if (!isset($this->config['clusters']['register']) || !is_array($this->config['clusters']['register'])) {
                 $this->warn('集群模式开启但是缺少 clusters.register 参数');
                 exit;
             }
 
-            if (!isset($this->config['clusters']['register']['ip']))
-            {
+            if (!isset($this->config['clusters']['register']['ip'])) {
                 $this->warn('集群模式开启但是缺少 clusters.register.ip 参数');
                 exit;
             }
 
             # 注册服务器端口
-            if (!isset($this->config['clusters']['register']['port']))
-            {
+            if (!isset($this->config['clusters']['register']['port'])) {
                 $this->config['clusters']['register']['port'] = 1310;
             }
 
             # 集群间通讯端口
-            if (!isset($this->config['clusters']['port']))
-            {
+            if (!isset($this->config['clusters']['port'])) {
                 $this->config['clusters']['port'] = 1311;
             }
 
             # 高级模式下任务进程端口
-            if ($this->clustersType === 2 && !isset($this->config['clusters']['task_port']))
-            {
+            if ($this->clustersType === 2 && !isset($this->config['clusters']['task_port'])) {
                 $this->config['clusters']['task_port'] = 1312;
             }
 
-            if (isset($this->config['clusters']['register']['key']) && $this->config['clusters']['register']['key'])
-            {
+            if (isset($this->config['clusters']['register']['key']) && $this->config['clusters']['register']['key']) {
                 # 设置集群注册服务器密码
                 Register\RPC::$RPC_KEY = $this->config['clusters']['register']['key'];
             }
         }
 
         # 缓存目录
-        if (isset($this->config['swoole']['task_tmpdir']))
-        {
-            if (!is_dir($this->config['swoole']['task_tmpdir']))
-            {
+        if (isset($this->config['swoole']['task_tmpdir'])) {
+            if (!is_dir($this->config['swoole']['task_tmpdir'])) {
                 $tmpDir = '/tmp/';
-                if (!is_dir($tmpDir))
-                {
+                if (!is_dir($tmpDir)) {
                     $tmpDir = sys_get_temp_dir();
                 }
 
-                if ($this->config['swoole']['task_tmpdir'] !== '/dev/shm/')
-                {
-                    $this->warn('定义的 swoole.task_tmpdir 的目录 '.$this->config['swoole']['task_tmpdir'].' 不存在, 已改到临时目录：'. $tmpDir);
+                if ($this->config['swoole']['task_tmpdir'] !== '/dev/shm/') {
+                    $this->warn('定义的 swoole.task_tmpdir 的目录 ' . $this->config['swoole']['task_tmpdir'] . ' 不存在, 已改到临时目录：' . $tmpDir);
                 }
                 $this->config['swoole']['task_tmpdir'] = $tmpDir;
             }
@@ -1382,12 +1203,10 @@ class Server
     protected function parseSockUri($uri)
     {
         $result = new \stdClass();
-        $p      = parse_url($uri);
+        $p = parse_url($uri);
 
-        if ($p)
-        {
-            switch ($scheme = strtolower($p['scheme']))
-            {
+        if ($p) {
+            switch ($scheme = strtolower($p['scheme'])) {
                 case 'http':
                 case 'https':
                 case 'ws':
@@ -1402,31 +1221,29 @@ class Server
                 case 'sslv3':
                 case 'tls':
                     $result->scheme = $scheme;
-                    $result->type   = SWOOLE_SOCK_TCP;
-                    $result->host   = $p['host'];
-                    $result->port   = $p['port'];
+                    $result->type = SWOOLE_SOCK_TCP;
+                    $result->host = $p['host'];
+                    $result->port = $p['port'];
                     break;
 
                 case 'tcp6':
                     $result->scheme = $scheme;
-                    $result->type   = SWOOLE_SOCK_TCP6;
-                    $result->host   = $p['host'];
-                    $result->port   = $p['port'];
+                    $result->type = SWOOLE_SOCK_TCP6;
+                    $result->host = $p['host'];
+                    $result->port = $p['port'];
                     break;
 
                 case 'unix':
                     $result->scheme = $scheme;
-                    $result->type   = SWOOLE_UNIX_STREAM;
-                    $result->host   = $p['path'];
-                    $result->port   = 0;
+                    $result->type = SWOOLE_UNIX_STREAM;
+                    $result->host = $p['path'];
+                    $result->port = 0;
                     break;
 
                 default:
                     throw new \Exception("Can't support this scheme: {$p['scheme']}");
             }
-        }
-        else
-        {
+        } else {
             throw new \Exception("Can't parse this uri: " . $uri);
         }
 
@@ -1437,18 +1254,16 @@ class Server
     /**
      * 设置自定义端口监听的回调
      *
-     * @param string  $key
+     * @param string $key
      * @param \Swoole\Server\Port $listen
      * @param \stdClass $opt
      */
     protected function setListenCallback($key, $listen, \stdClass $opt)
     {
-        switch ($opt->scheme)
-        {
+        switch ($opt->scheme) {
             case 'http':
             case 'https':
-                $listen->on('Request', function($request, $response) use ($key)
-                {
+                $listen->on('Request', function ($request, $response) use ($key) {
                     /**
                      * @var \Swoole\Http\Request $request
                      * @var \Swoole\Http\Response $response
@@ -1464,58 +1279,46 @@ class Server
             case 'ws':
             case 'wss':
 
-                $listen->on('Message', function($server, $frame) use ($key)
-                {
+                $listen->on('Message', function ($server, $frame) use ($key) {
                     $this->workers[$key]->onMessage($server, $frame);
                 });
 
-                if ($this->config['hosts'][$key]['handShake'])
-                {
-                    $listen->on('HandShake', function($request, $response) use ($key)
-                    {
+                if ($this->config['hosts'][$key]['handShake']) {
+                    $listen->on('HandShake', function ($request, $response) use ($key) {
                         $this->workers[$key]->onHandShake($request, $response);
                     });
-                }
-                else
-                {
-                    $listen->on('Open', function($svr, $req) use ($key)
-                    {
+                } else {
+                    $listen->on('Open', function ($svr, $req) use ($key) {
                         $this->workers[$key]->onOpen($svr, $req);
                     });
                 }
 
-                $listen->on('Close', function($server, $fd, $fromId) use ($key)
-                {
+                $listen->on('Close', function ($server, $fd, $fromId) use ($key) {
                     $this->workers[$key]->onClose($server, $fd, $fromId);
                 });
 
                 break;
             default:
 
-                $listen->on('Receive', function($server, $fd, $fromId, $data) use ($key)
-                {
+                $listen->on('Receive', function ($server, $fd, $fromId, $data) use ($key) {
                     $this->workers[$key]->onReceive($server, $fd, $fromId, $data);
                 });
 
-                switch ($opt->type)
-                {
+                switch ($opt->type) {
                     case SWOOLE_SOCK_TCP:
                     case SWOOLE_SOCK_TCP6:
-                        $listen->on('Connect', function($server, $fd, $fromId) use ($key)
-                        {
+                        $listen->on('Connect', function ($server, $fd, $fromId) use ($key) {
                             $this->workers[$key]->onConnect($server, $fd, $fromId);
                         });
 
-                        $listen->on('Close', function($server, $fd, $fromId) use ($key)
-                        {
+                        $listen->on('Close', function ($server, $fd, $fromId) use ($key) {
                             $this->workers[$key]->onClose($server, $fd, $fromId);
                         });
 
                         break;
                     case SWOOLE_UNIX_STREAM:
 
-                        $listen->on('Packet', function($server, $data, $clientInfo) use ($key)
-                        {
+                        $listen->on('Packet', function ($server, $data, $clientInfo) use ($key) {
                             $this->workers[$key]->onPacket($server, $data, $clientInfo);
                         });
                         break;
@@ -1562,37 +1365,28 @@ class Server
             [aaa[bb]] => 6
         )
          */
-        if (!$request->post || $request->header['content-type'] == 'application/x-www-form-urlencoded')
-        {
+        if (!$request->post || $request->header['content-type'] == 'application/x-www-form-urlencoded') {
             # application/x-www-form-urlencoded 时可以正确解析
             return;
         }
 
         $multi = false;
-        foreach ($request->post as $key => $v)
-        {
-            if (strpos($key, ']'))
-            {
+        foreach ($request->post as $key => $v) {
+            if (strpos($key, ']')) {
                 $multi = true;
                 break;
             }
         }
 
-        if ($multi)
-        {
+        if ($multi) {
             $str = '';
-            foreach ($request->post as $key => $v)
-            {
-                if (is_array($v))
-                {
-                    foreach ($v as $item)
-                    {
-                        $str .= "{$key}=". rawurlencode($item) ."&";
+            foreach ($request->post as $key => $v) {
+                if (is_array($v)) {
+                    foreach ($v as $item) {
+                        $str .= "{$key}=" . rawurlencode($item) . "&";
                     }
-                }
-                else
-                {
-                    $str .= "{$key}=". rawurlencode($v) ."&";
+                } else {
+                    $str .= "{$key}=" . rawurlencode($v) . "&";
                 }
             }
             $str = rtrim($str, '&');

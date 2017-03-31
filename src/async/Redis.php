@@ -4,6 +4,10 @@ namespace xutl\swoole\async;
 
 use yii\base\InvalidConfigException;
 
+/**
+ * Class Redis
+ * @package xutl\swoole\async
+ */
 class Redis extends Pool
 {
     /**

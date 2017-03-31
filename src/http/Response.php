@@ -1,4 +1,5 @@
 <?php
+
 namespace xutl\swoole\http;
 
 use xutl\swoole\Server;
@@ -102,57 +103,48 @@ class Response extends \Swoole\Http\Response
 
     public function __destruct()
     {
-        if (!$this->isClose)
-        {
+        if (!$this->isClose) {
             $this->end();
         }
     }
 
     public function sendHeader($contentLength = null)
     {
-        if ($this->headerIsSend)return;
+        if ($this->headerIsSend) return;
 
         # 只执行一次
         $this->headerIsSend = true;
 
         # 拼接投信息
-        $head = "HTTP/1.1 {$this->status} ". self::$messages[$this->status] ."\r\n";
+        $head = "HTTP/1.1 {$this->status} " . self::$messages[$this->status] . "\r\n";
         $header = $this->header + [
-            'Server' => 'aaa',
-            'Connection'   => 'keep-alive',
-            'Date'         => date('D, d M Y H:i:s \G\M\T'),
-            'Content-Type' => 'text/html',
-        ];
+                'Server' => 'aaa',
+                'Connection' => 'keep-alive',
+                'Date' => date('D, d M Y H:i:s \G\M\T'),
+                'Content-Type' => 'text/html',
+            ];
 
-        if ($header['Connection'] === 'keep-alive')
-        {
+        if ($header['Connection'] === 'keep-alive') {
             $header['Keep-Alive'] = $this->keepAlive;
         }
 
-        if ($this->chunked)
-        {
+        if ($this->chunked) {
             $header['Transfer-Encoding'] = 'chunked';
-        }
-        elseif ($contentLength)
-        {
+        } elseif ($contentLength) {
             $header['Content-Length'] = $contentLength;
         }
 
-        foreach ($header as $k => $v)
-        {
+        foreach ($header as $k => $v) {
             $head .= "{$k}: {$v}\r\n";
         }
 
-        if ($this->cookie)
-        {
-            foreach (array_unique($this->cookie) as $cookie)
-            {
+        if ($this->cookie) {
+            foreach (array_unique($this->cookie) as $cookie) {
                 $head .= "Set-Cookie: {$cookie}\r\n";
             }
         }
 
-        if ($this->gzipLevel)
-        {
+        if ($this->gzipLevel) {
             $head .= "Content-Encoding: gzip\r\n";
         }
 
@@ -169,24 +161,21 @@ class Response extends \Swoole\Http\Response
      */
     public function write($html)
     {
-        if ($this->isClose)
-        {
+        if ($this->isClose) {
             Server::$instance->warn('Http request is end.');
             return;
         }
 
-        if (!$this->headerIsSend)
-        {
+        if (!$this->headerIsSend) {
             $this->chunked = true;
             $this->sendHeader();
         }
 
-        if ($this->gzipLevel)
-        {
+        if ($this->gzipLevel) {
             $html = gzencode($html, $this->gzipLevel);
         }
 
-        $html = dechex(strlen($html)) ."\r\n". $html ."\r\n";
+        $html = dechex(strlen($html)) . "\r\n" . $html . "\r\n";
 
         Server::$instance->server->send($this->fd, $html);
     }
@@ -198,34 +187,26 @@ class Response extends \Swoole\Http\Response
      */
     public function end($html = '')
     {
-        if ($this->isClose)
-        {
+        if ($this->isClose) {
             Server::$instance->warn('Http request is end.');
             return;
         }
         $this->isClose = true;
 
-        if (!$this->chunked)
-        {
-            if ($this->gzipLevel)
-            {
+        if (!$this->chunked) {
+            if ($this->gzipLevel) {
                 $html = gzencode($html, $this->gzipLevel);
             }
 
-            if (!$this->headerIsSend)
-            {
+            if (!$this->headerIsSend) {
                 $this->sendHeader(strlen($html));
             }
 
-            if ($html)
-            {
+            if ($html) {
                 Server::$instance->server->send($this->fd, $html);
             }
-        }
-        else
-        {
-            if (!$this->headerIsSend)
-            {
+        } else {
+            if (!$this->headerIsSend) {
                 $this->sendHeader();
             }
 
@@ -248,11 +229,10 @@ class Response extends \Swoole\Http\Response
      */
     public function sendfile($filename, $offset = null)
     {
-        if (!is_file($filename))return false;
-        if (substr($filename, -4) === '.php')return false;
+        if (!is_file($filename)) return false;
+        if (substr($filename, -4) === '.php') return false;
 
-        if (!$this->headerIsSend)
-        {
+        if (!$this->headerIsSend) {
             $this->sendHeader(filesize($filename));
         }
 
@@ -268,15 +248,13 @@ class Response extends \Swoole\Http\Response
     public function header($key, $value, $ucwords = null)
     {
         $k = explode('-', strtolower($key));
-        $h = function(& $v, $k)
-        {
+        $h = function (& $v, $k) {
             $v = ucfirst($v);
         };
         array_walk($k, $h);
         $key = implode('-', $k);
 
-        if ($key === 'Set-Cookie')
-        {
+        if ($key === 'Set-Cookie') {
             $this->cookie[] = $value;
             return;
         }
@@ -289,38 +267,33 @@ class Response extends \Swoole\Http\Response
      *
      * @param string $key
      * @param string $value
-     * @param int    $expire
+     * @param int $expire
      * @param string $path
      * @param string $domain
-     * @param bool   $secure
-     * @param bool   $httponly
+     * @param bool $secure
+     * @param bool $httponly
      */
     public function cookie($key, $value = null, $expire = null, $path = null, $domain = null, $secure = null, $httponly = null)
     {
         $cookie = "{$key}={$value}";
 
-        if ($expire)
-        {
-            $cookie .= '; expires='. date('D, d M Y H:i:s \G\M\T', $expire);
+        if ($expire) {
+            $cookie .= '; expires=' . date('D, d M Y H:i:s \G\M\T', $expire);
         }
 
-        if ($path)
-        {
+        if ($path) {
             $cookie .= "; path={$path}";
         }
 
-        if ($domain)
-        {
+        if ($domain) {
             $cookie .= "; domain={$domain}";
         }
 
-        if ($secure)
-        {
+        if ($secure) {
             $cookie .= "; secure";
         }
 
-        if ($httponly)
-        {
+        if ($httponly) {
             $cookie .= "; httponly";
         }
 
@@ -344,7 +317,7 @@ class Response extends \Swoole\Http\Response
      */
     function gzip($level = 1)
     {
-        if ($this->headerIsSend)return;
+        if ($this->headerIsSend) return;
 
         $this->gzipLevel = $level;
     }

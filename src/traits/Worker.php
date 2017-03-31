@@ -1,4 +1,5 @@
 <?php
+
 namespace xutl\swoole\traits;
 
 use xutl\swoole\Server;
@@ -60,19 +61,18 @@ trait Worker
     public function __construct($server, $name)
     {
         static::$startTime = time();
-        $this->server      = $server;
-        $this->name        = $name;
-        $this->id          =& $server->worker_id;
+        $this->server = $server;
+        $this->name = $name;
+        $this->id =& $server->worker_id;
 
-        if ($this instanceof \MyQEE\Server\WorkerTask)
-        {
+        if ($this instanceof \MyQEE\Server\WorkerTask) {
             # 任务进程，有一个 taskId
             $this->taskId = $server->worker_id - $server->setting['worker_num'];
         }
 
-        static::$Server     = Server::$instance;
+        static::$Server = Server::$instance;
         static::$serverName =& static::$Server->serverName;
-        $this->setting      = static::$Server->config['hosts'][$this->name];
+        $this->setting = static::$Server->config['hosts'][$this->name];
     }
 
     /**
@@ -81,40 +81,34 @@ trait Worker
      * 不可以向自己投递，它支持服务器集群下向任意集群去投递数据
      *
      * @param        $data
-     * @param int    $workerId
-     * @param int    $serverId
+     * @param int $workerId
+     * @param int $serverId
      * @param string $serverGroup
      * @return bool
      */
     public function sendMessage($data, $workerId, $serverId = -1, $serverGroup = null)
     {
-        if ($serverId < 0 || static::$Server->clustersType === 0 || ($this->serverId === $serverId && null === $serverGroup))
-        {
+        if ($serverId < 0 || static::$Server->clustersType === 0 || ($this->serverId === $serverId && null === $serverGroup)) {
             # 没有指定服务器ID 或者 本服务器 或 非集群模式
 
-            if ($workerId === $this->id)
-            {
+            if ($workerId === $this->id) {
                 # 自己调自己
                 $this->onPipeMessage($this->server, $this->id, $data, $serverId);
 
                 return true;
-            }
-            else if ($this->name !== static::$Server->mainHostKey || !is_string($data))
-            {
+            } else if ($this->name !== static::$Server->mainHostKey || !is_string($data)) {
                 $obj = new \stdClass();
                 $obj->_sys = true;
                 $obj->name = $this->name;
-                $obj->sid  = static::$Server->serverId;
+                $obj->sid = static::$Server->serverId;
                 $obj->data = $data;
-                $data      = serialize($obj);
+                $data = serialize($obj);
             }
 
             return $this->server->sendMessage($data, $workerId);
-        }
-        else
-        {
+        } else {
             $client = \MyQEE\Server\Clusters\Client::getClient($serverGroup, $serverId, $workerId, true);
-            if (!$client)return false;
+            if (!$client) return false;
 
             return $client->sendData('msg', $data, $this->name);
         }
@@ -133,11 +127,10 @@ trait Worker
      */
     public function sendMessageToAllWorker($data, $workerType = 0)
     {
-        $i         = 0;
+        $i = 0;
         $workerNum = $this->server->setting['worker_num'] + $this->server->setting['task_worker_num'];
 
-        switch ($workerType)
-        {
+        switch ($workerType) {
             case 1:
                 $workerNum = $this->server->setting['worker_num'];
                 break;
@@ -149,10 +142,8 @@ trait Worker
                 break;
         }
 
-        while ($i < $workerNum)
-        {
-            if (!$this->sendMessage($data, $i))
-            {
+        while ($i < $workerNum) {
+            if (!$this->sendMessage($data, $i)) {
                 throw new \Exception('worker id:' . $i . ' is send message fail!');
             }
 
@@ -210,7 +201,7 @@ trait Worker
      * 错误信息
      *
      * @param string|array $labelOrData
-     * @param array        $data
+     * @param array $data
      */
     protected function warn($labelOrData, array $data = null)
     {
@@ -221,7 +212,7 @@ trait Worker
      * 输出信息
      *
      * @param string|array $labelOrData
-     * @param array        $data
+     * @param array $data
      */
     protected function info($labelOrData, array $data = null)
     {
@@ -232,7 +223,7 @@ trait Worker
      * 调试信息
      *
      * @param string|array $labelOrData
-     * @param array        $data
+     * @param array $data
      */
     protected function debug($labelOrData, array $data = null)
     {
@@ -243,7 +234,7 @@ trait Worker
      * 跟踪信息
      *
      * @param string|array $labelOrData
-     * @param array        $data
+     * @param array $data
      */
     protected function trace($labelOrData, array $data = null)
     {

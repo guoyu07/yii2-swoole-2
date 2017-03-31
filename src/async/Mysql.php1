@@ -2,7 +2,9 @@
 
 namespace xutl\swoole\async;
 
-use yii\base\Exception;
+/**
+ * mysql连接池
+ */
 use yii\base\InvalidConfigException;
 
 /**
@@ -10,7 +12,7 @@ use yii\base\InvalidConfigException;
  *
  * @package xutl\swoole\async
  */
-class MySQL extends Pool
+class Mysql extends Pool
 {
     /**
      * @var string mysql host
