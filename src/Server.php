@@ -2,6 +2,8 @@
 
 namespace xutl\swoole;
 
+use yii\base\Object;
+
 define('VERSION', '4.0');
 
 /**
@@ -11,7 +13,7 @@ define('VERSION', '4.0');
  *
  * @package xutl\swoole
  */
-class Server
+class Server extends Object
 {
     /**
      * 服务器ID
