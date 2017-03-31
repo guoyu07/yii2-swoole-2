@@ -21,6 +21,13 @@ class Server extends Object
     public $serverId = -1;
 
     /**
+     * 当前服务器名
+     *
+     * @var string
+     */
+    public $serverName;
+
+    /**
      * 所有的配置
      *
      * @var array
@@ -35,16 +42,9 @@ class Server extends Object
     public $configFile = null;
 
     /**
-     * @var \Swoole\Server|\Swoole\WebSocket\Server|\Swoole\Redis\Server
+     * @var \Swoole\Server|\Swoole\WebSocket\Server
      */
     public $server;
-
-    /**
-     * 当前服务器名
-     *
-     * @var string
-     */
-    public $serverName;
 
     /**
      * 当前任务进程对象
