@@ -6,18 +6,21 @@
  */
 namespace xutl\swoole;
 
+use Yii;
 use yii\base\Component;
 
+/**
+ * Class Server
+ * @package xutl\swoole
+ */
 class Server extends Component
 {
-    /**
-     * @var string 绑定地址
-     */
-    public $host;
-    public $port = 9502;
-    public $mode = SWOOLE_PROCESS;
-    public $sockType;
-    public $config = [];
+    public $schemaMap = [
+        'http' => 'Swoole\Http\Server', // Http
+        'websocket' => 'Swoole\WebSocket\Server', // WebSocket
+        'redis' => 'Swoole\Redis\Server', // Redis
+        'default' => 'Swoole\Server', // default
+    ];
 
     /**
      * @inheritdoc
