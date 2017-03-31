@@ -1,7 +1,14 @@
 <?php
-namespace xutl\swoole;
 
-abstract class WorkerTCP extends Worker
+namespace xutl\swoole\worker;
+
+use xutl\swoole\Worker;
+
+/**
+ * Class WorkerTCP
+ * @package xutl\swoole\worker
+ */
+abstract class Tcp extends Worker
 {
     /**
      * @param \Swoole\Server $server

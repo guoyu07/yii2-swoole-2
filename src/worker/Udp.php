@@ -1,14 +1,17 @@
 <?php
+
 namespace xutl\swoole;
 
-abstract class WorkerUDP extends Worker
+use xutl\swoole\Worker;
+
+abstract class Udp extends Worker
 {
     /**
      * UDP下收到数据回调
      *
      * @param $server
-     * @param $fd
-     * @param $fromId
+     * @param $data
+     * @param $clientInfo
      */
     abstract public function onPacket($server, $data, $clientInfo);
 }

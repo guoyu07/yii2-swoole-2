@@ -1,7 +1,10 @@
 <?php
+
 namespace xutl\swoole;
 
-abstract class WorkerWebSocket extends WorkerHttp
+use xutl\swoole\worker\Http;
+
+abstract class WebSocket extends Http
 {
     /**
      * WebSocket 获取消息回调

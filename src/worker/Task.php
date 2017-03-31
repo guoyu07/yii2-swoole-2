@@ -1,9 +1,12 @@
 <?php
-namespace xutl\swoole;
 
-class WorkerTask
+namespace xutl\swoole\worker;
+
+use xutl\swoole\traits\Worker;
+
+class Task
 {
-    use traits\Worker;
+    use Worker;
 
     /**
      * 任务进程名，一般不用改
@@ -26,13 +29,10 @@ class WorkerTask
      */
     public function finish($rs)
     {
-        if (self::$Server->clustersType < 2)
-        {
+        if (self::$Server->clustersType < 2) {
             # 没有指定服务器ID 或者 非集群模式
             $this->server->finish($rs);
-        }
-        else
-        {
+        } else {
 
         }
     }
@@ -74,13 +74,12 @@ class WorkerTask
      */
     protected function timeTick($interval, $callback, $params = null)
     {
-        $aTime  = intval($interval * $this->taskId / $this->server->setting['task_worker_num']);
-        $mTime  = intval(microtime(1) * 1000);
+        $aTime = intval($interval * $this->taskId / $this->server->setting['task_worker_num']);
+        $mTime = intval(microtime(1) * 1000);
         $aTime += $interval * ceil($mTime / $interval) - $mTime;
 
         # 增加一个延迟执行的定时器
-        swoole_timer_after($aTime, function() use ($interval, $callback, $params)
-        {
+        swoole_timer_after($aTime, function () use ($interval, $callback, $params) {
             # 添加定时器
             swoole_timer_tick($interval, $callback, $params);
         });

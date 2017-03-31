@@ -65,7 +65,7 @@ trait Worker
         $this->name = $name;
         $this->id =& $server->worker_id;
 
-        if ($this instanceof \MyQEE\Server\WorkerTask) {
+        if ($this instanceof \xutl\swoole\WorkerTask) {
             # 任务进程，有一个 taskId
             $this->taskId = $server->worker_id - $server->setting['worker_num'];
         }
@@ -88,30 +88,21 @@ trait Worker
      */
     public function sendMessage($data, $workerId, $serverId = -1, $serverGroup = null)
     {
-        if ($serverId < 0 || static::$Server->clustersType === 0 || ($this->serverId === $serverId && null === $serverGroup)) {
-            # 没有指定服务器ID 或者 本服务器 或 非集群模式
+        if ($workerId === $this->id) {
+            # 自己调自己
+            $this->onPipeMessage($this->server, $this->id, $data, $serverId);
 
-            if ($workerId === $this->id) {
-                # 自己调自己
-                $this->onPipeMessage($this->server, $this->id, $data, $serverId);
-
-                return true;
-            } else if ($this->name !== static::$Server->mainHostKey || !is_string($data)) {
-                $obj = new \stdClass();
-                $obj->_sys = true;
-                $obj->name = $this->name;
-                $obj->sid = static::$Server->serverId;
-                $obj->data = $data;
-                $data = serialize($obj);
-            }
-
-            return $this->server->sendMessage($data, $workerId);
-        } else {
-            $client = \MyQEE\Server\Clusters\Client::getClient($serverGroup, $serverId, $workerId, true);
-            if (!$client) return false;
-
-            return $client->sendData('msg', $data, $this->name);
+            return true;
+        } else if ($this->name !== static::$Server->mainHostKey || !is_string($data)) {
+            $obj = new \stdClass();
+            $obj->_sys = true;
+            $obj->name = $this->name;
+            $obj->sid = static::$Server->serverId;
+            $obj->data = $data;
+            $data = serialize($obj);
         }
+
+        return $this->server->sendMessage($data, $workerId);
     }
 
     /**
@@ -188,7 +179,7 @@ trait Worker
      * 输出自定义log
      *
      * @param string $label
-     * @param string|array $info
+     * @param string|array $data
      * @param string $type
      * @param string $color
      */

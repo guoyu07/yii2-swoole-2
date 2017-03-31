@@ -1,8 +1,10 @@
 <?php
 
-namespace xutl\swoole;
+namespace xutl\swoole\worker;
 
-class WorkerHttp extends Worker
+use xutl\swoole\Worker;
+
+class Http extends Worker
 {
     /**
      * 静态文件类型

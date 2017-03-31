@@ -1,5 +1,8 @@
 <?php
+
 namespace xutl\swoole;
+
+use xutl\swoole\Worker;
 
 /**
  * Redis 类型的工作进程对象
@@ -8,7 +11,7 @@ namespace xutl\swoole;
  *
  * @package xutl\swoole
  */
-abstract class WorkerRedis extends Worker
+abstract class Redis extends Worker
 {
     /**
      * GET 命令

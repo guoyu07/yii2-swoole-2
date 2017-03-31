@@ -55,25 +55,11 @@ class Worker
      * @param          $data
      * @param int $workerId
      * @param \Closure $callback
-     * @param int $serverId 默认 -1 则优先本地投递
-     * @param string $serverGroup
      * @return bool|int
      */
-    public function task($data, $workerId = -1, $callback = null, $serverId = -1, $serverGroup = null)
+    public function task($data, $workerId = -1, $callback = null)
     {
-        if (static::$Server->clustersType < 2) {
-            # 非高级集群模式
-            return $this->server->task($data, $workerId, $callback);
-        } else {
-            # 高级集群模式
-            $client = Clusters\Client::getClient($serverGroup, $serverId, $workerId, true);
-            if (!$client) {
-                $this->debug('get task client error');
-                return false;
-            }
-
-            return $client->sendData('task', $data, $this->name, $callback);
-        }
+        return $this->server->task($data, $workerId, $callback);
     }
 
     /**
@@ -88,15 +74,7 @@ class Worker
      */
     public function taskWait($taskData, $timeout = 0.5, $workerId = -1, $serverId = -1, $serverGroup = null)
     {
-        if (static::$Server->clustersType < 2) {
-            # 非高级集群模式
-            return $this->server->taskwait($taskData, $timeout, $workerId);
-        } else {
-            $client = Clusters\Client::getClient($serverGroup, $serverId, $workerId, true);
-            if (!$client) return false;
-
-            return $client->taskWait($taskData, $timeout, $this->name);
-        }
+        return $this->server->taskwait($taskData, $timeout, $workerId);
     }
 
 

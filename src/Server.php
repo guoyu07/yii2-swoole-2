@@ -4,8 +4,6 @@ namespace xutl\swoole;
 
 use yii\base\Object;
 
-define('VERSION', '4.0');
-
 /**
  * 服务器对象
  *
@@ -58,7 +56,7 @@ class Server extends Object
     /**
      * 当前进程对象
      *
-     * @var \WorkerMain|WorkerWebSocket|WorkerTCP|WorkerUDP|WorkerRedis
+     * @var \WorkerMain|WebSocket|WorkerTCP|Udp|WorkerRedis
      */
     public $worker;
 
@@ -366,23 +364,23 @@ class Server extends Object
             case 3:
             case 2:
                 # 主端口同时支持 WebSocket 和 Http 协议
-                $className = '\\Swoole\\WebSocket\\Server';
+                $className = 'Swoole\WebSocket\Server';
                 break;
 
             case 1:
                 # 主端口仅 Http 协议
-                $className = '\\Swoole\\Http\\Server';
+                $className = 'Swoole\Http\Server';
                 break;
 
             case 4:
                 # Redis 协议
-                $className = '\\Swoole\\Redis\\Server';
+                $className = 'Swoole\Redis\Server';
                 break;
 
             case 0:
             default:
                 # 主端口为自定义端口
-                $className = '\\Swoole\\Server';
+                $className = 'Swoole\Server';
                 break;
         }
 
@@ -420,17 +418,6 @@ class Server extends Object
 
         # 启动服务
         $this->server->start();
-    }
-
-    /**
-     * 启动task服务器
-     */
-    public function startTaskServer()
-    {
-        # 初始化任务服务器
-        $server = new Clusters\TaskServer();
-
-        $server->start($this->config['clusters']['host'] ?: '0.0.0.0', $this->config['clusters']['task_port']);
     }
 
     /**
@@ -1057,7 +1044,7 @@ class Server extends Object
                         break;
                     case 'redis':
                         # Redis 服务器
-                        if (!($this instanceof ServerRedis)) {
+                        if (!($this instanceof Redis)) {
                             $this->warn('启动 Redis 服务器必须使用或扩展到 MyQEE\\Server\\ServerRedis 类，当前“' . get_class($this) . '”不支持');
                             exit;
                         }
